@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% from "_ui.html" import constelacion, logo %}{% block c %}
+<div class="grid min-h-screen md:grid-cols-[1.15fr_1fr]">
+ <section class="hero hidden flex-col justify-between p-12 md:flex">{{ constelacion() }}
+  <div class="relative z-10">{{ logo(true) }}</div>
+  <div class="relative z-10 max-w-lg"><h1 class="text-5xl font-extrabold leading-[1.05] tracking-tight">Tu próxima oportunidad está a un contacto de distancia.</h1>
+   <p class="mt-5 text-lg text-teal-100">Conecta con profesionales, muestra tus habilidades y descubre empleos que encajan contigo y con tu red.</p></div>
+  <p class="relative z-10 text-sm text-teal-200">Personas, empresas, habilidades y proyectos, unidos en un grafo.</p></section>
+ <section class="flex items-center justify-center p-6"><div class="w-full max-w-md">
+  <div class="mb-6 md:hidden">{{ logo() }}</div>
+  <div class="card !p-8">
+  <div class="mb-6 flex gap-6 border-b border-slate-200 text-sm font-bold">
+   <a href="/" class="pb-3 {{ 'border-b-2 border-teal-600 text-teal-700' if modo!='registro' else 'text-slate-500' }}">Ingresar</a>
+   <a href="/?modo=registro" class="pb-3 {{ 'border-b-2 border-teal-600 text-teal-700' if modo=='registro' else 'text-slate-500' }}">Crear cuenta</a></div>
+  {% for cat, m in get_flashed_messages(with_categories=true) %}<div class="mb-4 rounded-xl px-4 py-3 text-sm font-semibold {{ 'bg-rose-50 text-rose-800 ring-1 ring-rose-200' if cat=='err' else 'bg-teal-50 text-teal-900' }}" role="alert">{{ m }}</div>{% endfor %}
+  {% if modo=='registro' %}
+  <form method="post" action="/registro" class="space-y-3" autocomplete="off"><input type="hidden" name="_csrf" value="{{ csrf() }}">
+   <input class="inp" name="nombre" placeholder="Nombre completo" minlength="2" maxlength="80" required>
+   <input class="inp" type="email" name="email" placeholder="Correo electrónico" maxlength="120" required>
+   <div class="relative"><input class="inp pr-20" type="password" id="clave" name="clave" placeholder="Contraseña" minlength="8" maxlength="64" autocomplete="new-password" required>
+    <button type="button" id="ver" class="absolute right-3 top-2.5 text-xs font-bold text-teal-700">Mostrar</button></div>
+   <div class="h-1.5 w-full rounded-full bg-slate-100"><div id="barra" class="h-full w-0 rounded-full"></div></div>
+   <ul class="grid grid-cols-1 gap-1 text-xs">
+   {% for id, t in [('len','Mínimo 8 caracteres'),('may','Una letra mayúscula'),('min','Una letra minúscula'),('num','Un número'),('sim','Un símbolo, por ejemplo ! # $ %')] %}<li id="r-{{ id }}" class="flex items-center gap-2 text-slate-500"><span class="h-2 w-2 rounded-full bg-slate-300"></span>{{ t }}</li>{% endfor %}</ul>
+   <input class="inp" type="password" id="clave2" name="clave2" placeholder="Repite la contraseña" maxlength="64" autocomplete="new-password" required>
+   <p id="igual" class="text-xs font-semibold text-rose-700" aria-live="polite"></p>
+   <input class="inp" name="titular" placeholder="Titular, por ejemplo: Estudiante de Ingeniería de Sistemas" maxlength="120">
+   <input class="inp" name="ciudad" placeholder="Ciudad" maxlength="60">
+   <button id="enviar" class="btn w-full justify-center py-3" disabled>Crear cuenta</button></form>
+  <script>
+  const c=document.getElementById('clave'),c2=document.getElementById('clave2'),btn=document.getElementById('enviar'),barra=document.getElementById('barra');
+  const reglas=[['len',v=>v.length>=8],['may',v=>/[A-Z]/.test(v)],['min',v=>/[a-z]/.test(v)],['num',v=>/\d/.test(v)],['sim',v=>/[^A-Za-z0-9]/.test(v)]];
+  function revisar(){const v=c.value;let ok=0;
+   reglas.forEach(([id,f])=>{const li=document.getElementById('r-'+id),y=f(v);ok+=y;li.className='flex items-center gap-2 '+(y?'font-semibold text-teal-700':'text-slate-500');li.firstElementChild.className='h-2 w-2 rounded-full '+(y?'bg-teal-600':'bg-slate-300')});
+   barra.style.width=(ok*20)+'%';barra.className='h-full rounded-full transition-all '+(ok<3?'bg-rose-500':ok<5?'bg-amber-500':'bg-teal-600');
+   const ig=v&&v===c2.value;const m=document.getElementById('igual');m.textContent=c2.value?(ig?'Las contraseñas coinciden':'Las contraseñas no coinciden'):'';m.className='text-xs font-semibold '+(ig?'text-teal-700':'text-rose-700');
+   btn.disabled=!(ok===5&&ig)}
+  c.addEventListener('input',revisar);c2.addEventListener('input',revisar);revisar();
+  document.getElementById('ver').onclick=e=>{const o=c.type==='password';c.type=c2.type=o?'text':'password';e.target.textContent=o?'Ocultar':'Mostrar'};
+  </script>
+  {% else %}
+  <form method="post" action="/ingresar" class="space-y-3"><input type="hidden" name="_csrf" value="{{ csrf() }}">
+   <input class="inp" type="email" name="email" placeholder="Correo electrónico" required>
+   <input class="inp" type="password" name="clave" placeholder="Contraseña" required>
+   <button class="btn w-full justify-center py-3">Ingresar</button></form>
+   <p class="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">Cuenta de prueba: <b>valentina@demo.com</b> con contraseña <b>demo123</b></p>
+  {% endif %}</div></div></section></div>{% endblock %}

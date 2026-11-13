@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% from "_ui.html" import persona, conectar, explica, constelacion %}{% block c %}
+<section class="hero flex flex-wrap items-center justify-between gap-6 rounded-2xl p-8 shadow-lg">{{ constelacion() }}
+ <div class="relative z-10"><h1 class="text-3xl font-extrabold tracking-tight">Hola, {{ yo.nombre.split()[0] }}</h1><p class="mt-1 text-teal-100">Esto es lo que tu red tiene para ti hoy.</p>
+  <a href="/grafo" class="mt-4 inline-flex rounded-full bg-white px-5 py-2 text-sm font-bold text-slate-900 hover:bg-teal-50">Ver mi red como grafo</a></div>
+ <div class="relative z-10 flex gap-8 text-center">
+  <div><p class="text-4xl font-extrabold">{{ stats.contactos }}</p><p class="text-sm text-teal-100">contactos</p></div>
+  <div><p class="text-4xl font-extrabold">{{ stats.habilidades }}</p><p class="text-sm text-teal-100">habilidades</p></div>
+  <div><p class="text-4xl font-extrabold">{{ stats.postulaciones }}</p><p class="text-sm text-teal-100">postulaciones</p></div></div></section>
+{{ explica('Cómo funciona esta app', 'Cada persona, empresa, habilidad, proyecto y oferta es un nodo. Cada conexión, empleo, habilidad o postulación es una arista que une dos nodos. Las recomendaciones salen de recorrer esas aristas: amigos de amigos, habilidades en común, empresas donde trabajan tus contactos. En cada pantalla, abre los recuadros amarillos para ver qué se calcula y con qué consulta Cypher.') }}
+<div class="grid gap-5 md:grid-cols-2">
+ <section class="card"><h2 class="h2">Personas que quizá conozcas</h2>
+  {% for p in sugeridos %}{% call persona(p) %}<div class="flex flex-wrap items-center gap-2">
+   {% if p.comunes %}<span class="chip">{{ p.comunes }} contacto{{ 's' if p.comunes>1 }} en común</span>{% endif %}
+   {% if p.compartidas %}<span class="chip">{{ p.compartidas }} habilidad{{ 'es' if p.compartidas>1 }} compartida{{ 's' if p.compartidas>1 }}</span>{% endif %}
+   {{ conectar(p.id) }}</div>{% endcall %}
+  {% else %}<p class="py-4 text-sm text-stone-600">Aún no hay sugerencias. <a class="font-bold text-teal-800 underline" href="/usuario/{{ yo.id }}">Agrega habilidades a tu perfil</a> o <a class="font-bold text-teal-800 underline" href="/red">busca personas</a>.</p>{% endfor %}
+  <div class="mt-3">{{ explica('¿Por qué me recomiendan a estas personas?', 'Sumamos dos señales: contactos en común (un recorrido de dos saltos: tú, un contacto tuyo y esa persona) y habilidades compartidas. Los contactos en común pesan el doble.', sql.sugeridos) }}</div></section>
+ <section class="card"><h2 class="h2">Empleos para ti</h2>
+  {% for o in empleos %}<div class="flex items-center gap-3 border-b border-stone-100 py-3 last:border-0">
+   <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-sm font-extrabold text-teal-800">{{ o.pct }}%</div>
+   <div class="min-w-0 flex-1"><p class="font-bold">{{ o.titulo }}</p><p class="text-xs text-stone-500">{{ o.empresa }}{% if o.conocidos %} · conoces a {{ o.conocidos }} persona{{ 's' if o.conocidos>1 }} ahí{% endif %}</p></div>
+   <a href="/empleos" class="btn2">Ver</a></div>{% endfor %}
+  <div class="mt-3">{{ explica('¿Qué significa el porcentaje?', 'Es la parte de las habilidades que pide la oferta (arista REQUIERE) que tú ya tienes (arista TIENE_HABILIDAD). También contamos cuántos de tus contactos trabajan en esa empresa.', sql.empleos) }}</div></section>
+</div>{% endblock %}

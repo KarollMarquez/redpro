@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% from "_ui.html" import persona, conectar, explica %}{% block c %}
+<section class="card"><h1 class="h2">Encuentra personas</h1>
+ <form class="mt-3 flex gap-2"><input class="inp" name="buscar" value="{{ buscar }}" placeholder="Busca por nombre o cargo, por ejemplo: redes"><button class="btn">Buscar</button></form>
+ {% if resultados is not none %}<div class="mt-3 divide-y divide-stone-100">{% for r in resultados %}{% call persona(r) %}{% if r.id in ids_con %}<span class="chip">Ya conectados</span>{% else %}{{ conectar(r.id) }}{% endif %}{% endcall %}{% else %}<p class="py-3 text-sm text-stone-500">No encontramos a nadie con “{{ buscar }}”.</p>{% endfor %}</div>{% endif %}</section>
+<div class="grid gap-5 md:grid-cols-2">
+<section class="card"><h2 class="h2">Mis contactos ({{ contactos|length }})</h2>
+ {% for c in contactos %}{{ persona(c) }}{% else %}<p class="py-3 text-sm text-stone-500">Todavía no tienes contactos. Busca personas arriba o conecta con las sugerencias.</p>{% endfor %}</section>
+<section class="card"><h2 class="h2">Personas con tus habilidades</h2>
+ {% for s in similares %}{% call persona(s) %}<div class="flex flex-wrap items-center gap-2"><span class="chip">{{ s.hab }}</span>{% if s.id not in ids_con %}{{ conectar(s.id) }}{% endif %}</div>{% endcall %}
+ {% else %}<p class="py-3 text-sm text-stone-500">Agrega habilidades a tu perfil para ver coincidencias.</p>{% endfor %}
+ <div class="mt-3">{{ explica('¿Cómo se comparan las habilidades?', 'Dos usuarios están relacionados si ambos tienen una arista TIENE_HABILIDAD hacia la misma habilidad. Contamos cuántas comparten y ordenamos de mayor a menor.', sql.similares) }}</div></section></div>
+<section class="card"><h2 class="h2">¿Qué contactos tenemos en común?</h2>
+ <form class="mt-3 flex gap-2"><select name="otro" class="inp" required><option value="">Elige a una persona…</option>{% for p in personas %}<option value="{{ p.id }}" {{ 'selected' if otro==p.id }}>{{ p.nombre }}</option>{% endfor %}</select><button class="btn">Comparar</button></form>
+ {% if comunes is not none %}<div class="mt-3">{% for c in comunes %}{{ persona(c) }}{% else %}<p class="text-sm text-stone-500">No tienen contactos en común todavía.</p>{% endfor %}</div>{% endif %}
+ <div class="mt-3">{{ explica('Qué pasa aquí', 'Buscamos los nodos de usuario vecinos tuyos que también son vecinos de la otra persona: la intersección de dos listas de vecinos.', sql.comunes) }}</div></section>
+<section class="card"><h2 class="h2">¿Cuál es el camino más corto hacia una persona o empresa?</h2>
+ <form class="mt-3 flex gap-2"><select name="destino" class="inp" required><option value="">Elige un destino…</option>
+  <optgroup label="Personas">{% for p in personas %}<option value="u:{{ p.id }}" {{ 'selected' if destino=='u:%d'%p.id }}>{{ p.nombre }}</option>{% endfor %}</optgroup>
+  <optgroup label="Empresas">{% for e in empresas %}<option value="e:{{ e.id }}" {{ 'selected' if destino=='e:%d'%e.id }}>{{ e.nombre }}</option>{% endfor %}</optgroup></select><button class="btn">Buscar ruta</button></form>
+ {% if destino %}<div class="mt-4 flex flex-wrap items-center gap-2">
+  {% if ruta %}{% for s in ruta %}{% if s.rel %}<span class="text-xs text-stone-500">{{ s.rel|lower|replace('_',' ') }} -</span>{% endif %}
+  <span class="rounded-lg px-3 py-1.5 text-sm font-bold {{ {'u':'bg-teal-100 text-teal-900','e':'bg-amber-100 text-amber-900','p':'bg-emerald-100 text-emerald-900','o':'bg-rose-100 text-rose-900'}[s.t] }}">{{ s.n }}</span>{% endfor %}
+  <span class="ml-2 text-sm text-stone-600">({{ ruta|length - 1 }} salto{{ '' if ruta|length==2 }}{{ 's' if ruta|length!=2 }})</span>
+  {% else %}<p class="text-sm text-stone-500">No existe una ruta entre ustedes todavía. Conecta con más personas para crear una.</p>{% endif %}</div>{% endif %}
+ <div class="mt-3">{{ explica('Cómo se encuentra la ruta', 'Neo4j recorre el grafo como una onda: primero tus vecinos, luego los vecinos de ellos, y así hasta llegar al destino. Eso es lo que hace la función shortestPath, y el primer camino que encuentra es el de menos saltos. No hay JOINs: solo seguimos aristas. Los colores muestran el tipo de nodo: personas, empresas, proyectos y ofertas.', sql.ruta) }}</div></section>
+{% endblock %}

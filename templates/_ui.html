@@ -1,0 +1,17 @@
+{% macro avatar(n, big=false) %}<div class="flex shrink-0 items-center justify-center rounded-full font-extrabold text-white {{ 'h-24 w-24 text-3xl -mt-12 ring-4 ring-white' if big else 'h-11 w-11' }}" style="background:hsl({{ (n|length*47)%360 }},45%,38%)">{{ n.split()[0][0] }}{{ n.split()[1][0] if n.split()|length>1 }}</div>{% endmacro %}
+{% macro persona(p) %}<div class="flex items-center gap-3 py-2.5">{{ avatar(p.nombre) }}
+<div class="min-w-0 flex-1"><a href="/usuario/{{ p.id }}" class="font-bold hover:underline">{{ p.nombre }}</a>
+<p class="truncate text-xs text-stone-500">{{ p.titular or '' }}</p>{% if caller %}<div class="mt-1">{{ caller() }}</div>{% endif %}</div></div>{% endmacro %}
+{% macro conectar(id) %}<form method="post" action="/conectar/{{ id }}"><input type="hidden" name="_csrf" value="{{ csrf() }}"><button class="btn2">Conectar</button></form>{% endmacro %}
+{% macro explica(titulo, texto, consulta='') %}
+<details class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+<summary class="cursor-pointer font-bold">{{ titulo }}</summary><p class="mt-2 leading-relaxed">{{ texto }}</p>
+{% if consulta %}<p class="mt-2 font-semibold">La consulta que lo calcula:</p><pre class="mt-1 overflow-x-auto rounded-lg bg-stone-900 p-3 text-xs leading-5 text-emerald-300">{{ consulta }}</pre>{% endif %}</details>{% endmacro %}
+{% macro checks(habs) %}<div class="flex flex-wrap gap-2">{% for h in habs %}<label class="cursor-pointer"><input type="checkbox" name="hab" value="{{ h.id }}" class="peer sr-only"><span class="chip peer-checked:bg-teal-700 peer-checked:text-white peer-focus-visible:outline">{{ h.nombre }}</span></label>{% endfor %}</div>{% endmacro %}
+
+{% macro logo(claro=false) %}<span class="inline-flex items-center gap-2 text-xl font-extrabold tracking-tight {{ 'text-white' if claro else 'text-slate-900' }}">
+<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><line x1="7" y1="8" x2="21" y2="12" stroke="#5EEAD4" stroke-width="2"/><line x1="7" y1="8" x2="12" y2="22" stroke="#5EEAD4" stroke-width="2"/><line x1="21" y1="12" x2="12" y2="22" stroke="#5EEAD4" stroke-width="2"/><circle cx="7" cy="8" r="4" fill="#5EEAD4"/><circle cx="21" cy="12" r="4" fill="#14B8A6"/><circle cx="12" cy="22" r="4" fill="#2DD4BF"/></svg>RedPro</span>{% endmacro %}
+{% macro constelacion() %}<svg aria-hidden="true" viewBox="0 0 400 240" preserveAspectRatio="xMaxYMid slice" class="pointer-events-none absolute inset-y-0 right-0 h-full w-full opacity-30 md:w-3/4" fill="none" stroke="#5EEAD4" stroke-width="1">
+{% set pts=[(40,60),(120,30),(200,90),(290,40),(360,110),(260,170),(170,190),(80,150),(330,200),(210,10)] %}
+{% for a,b in [(0,1),(1,2),(2,3),(3,4),(2,5),(5,6),(6,7),(7,0),(2,6),(4,8),(5,8),(1,3),(1,9),(9,3)] %}<line x1="{{ pts[a][0] }}" y1="{{ pts[a][1] }}" x2="{{ pts[b][0] }}" y2="{{ pts[b][1] }}"/>{% endfor %}
+{% for x,y in pts %}<circle cx="{{ x }}" cy="{{ y }}" r="5" fill="#5EEAD4" stroke="none"/>{% endfor %}</svg>{% endmacro %}

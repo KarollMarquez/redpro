@@ -1,0 +1,32 @@
+{% from "_ui.html" import logo %}<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RedPro</title><script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+body{font-family:Figtree,system-ui,sans-serif;background:#EEF1F5;color:#1e293b}
+.hero{background:linear-gradient(135deg,#0E1B2E 0%,#123B54 55%,#0F766E 100%);color:#fff;position:relative;overflow:hidden}
+.card{@apply rounded-2xl bg-white p-6 ring-1 ring-slate-200/70 shadow-[0_1px_2px_rgba(14,27,46,.06),0_14px_30px_-18px_rgba(14,27,46,.28)]}
+.btn{@apply inline-flex items-center rounded-full bg-teal-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600}
+.btn2{@apply inline-flex items-center rounded-full border border-teal-600 px-4 py-1.5 text-sm font-bold text-teal-700 transition hover:bg-teal-50}
+.btn3{@apply text-sm font-semibold text-rose-700 hover:underline}
+.inp{@apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/25}
+.chip{@apply inline-block rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800}
+.h2{@apply text-lg font-extrabold tracking-tight text-slate-900}
+</style></head><body>
+{% if yo %}
+<header class="sticky top-0 z-20 bg-[#0E1B2E] shadow-lg">
+ <nav class="mx-auto flex max-w-6xl items-center gap-1 px-4 py-2.5 text-sm font-semibold text-slate-300">
+  <a href="/inicio" class="mr-5">{{ logo(true) }}</a>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/inicio">Inicio</a>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/red">Mi red</a>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/grafo">Grafo</a>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/empleos">Empleos</a>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/proyectos">Proyectos</a>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/analitica">Analítica</a>
+  <span class="flex-1"></span>
+  <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/usuario/{{ yo.id }}">Mi perfil</a>
+  <a class="rounded-lg px-3 py-2 text-slate-400 hover:bg-white/10 hover:text-white" href="/salir">Salir</a>
+ </nav></header>{% endif %}
+<main class="{{ 'mx-auto max-w-6xl space-y-5 p-4 pt-6' if yo }}">
+{% for cat, m in get_flashed_messages(with_categories=true) %}
+<div class="rounded-xl px-4 py-3 text-sm font-semibold {{ 'bg-rose-50 text-rose-800 ring-1 ring-rose-200' if cat=='err' else 'bg-teal-50 text-teal-900 ring-1 ring-teal-200' }}" role="status">{{ m }}</div>{% endfor %}
+{% block c %}{% endblock %}</main></body></html>
