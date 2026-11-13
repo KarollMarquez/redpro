@@ -2,6 +2,65 @@
 <section class="card"><h1 class="h2">Encuentra personas</h1>
  <form class="mt-3 flex gap-2"><input class="inp" name="buscar" value="{{ buscar }}" placeholder="Busca por nombre o cargo, por ejemplo: redes"><button class="btn">Buscar</button></form>
  {% if resultados is not none %}<div class="mt-3 divide-y divide-stone-100">{% for r in resultados %}{% call persona(r) %}{% if r.id in ids_con %}<span class="chip">Ya conectados</span>{% else %}{{ conectar(r.id) }}{% endif %}{% endcall %}{% else %}<p class="py-3 text-sm text-stone-500">No encontramos a nadie con “{{ buscar }}”.</p>{% endfor %}</div>{% endif %}</section>
+
+<section class="card overflow-hidden !p-0">
+ <div class="flex flex-wrap items-center gap-3 border-b border-slate-200 p-5">
+  <div class="mr-auto"><p class="eyebrow">Tu grafo personal</p><h2 class="h2 mt-1">Tu red a dos saltos</h2>
+   <p id="mired-conteo" class="muted">Cargando tu red…</p></div>
+  <div class="flex flex-wrap gap-3 text-xs font-bold text-slate-600">
+   <span class="flex items-center gap-1.5"><i class="h-3 w-3 rounded-full" style="background:#0E1B2E"></i>Tú</span>
+   <span class="flex items-center gap-1.5"><i class="h-3 w-3 rounded-full" style="background:#0F766E"></i>Tus contactos</span>
+   <span class="flex items-center gap-1.5"><i class="h-3 w-3 rounded-full" style="background:#94A3B8"></i>Contactos de tus contactos</span>
+  </div>
+ </div>
+ <div class="grid md:grid-cols-[1fr_290px]">
+  <div id="mired" style="height:440px" class="bg-slate-50"></div>
+  <aside id="mired-panel" class="max-h-[440px] overflow-y-auto border-l border-slate-200 p-5 text-sm">
+   <p class="font-bold text-slate-900">Explora tu red</p>
+   <p class="mt-1 muted">Haz clic en una persona para ver quién es y cómo llegas a ella. Los nodos grandes tienen más conexiones.</p>
+  </aside>
+ </div>
+</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
+<script>
+(function(){
+ const CSRF={{ csrf()|tojson }};
+ const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+ const panel=document.getElementById('mired-panel');
+ fetch('/api/mired').then(r=>r.json()).then(d=>{
+  const col=['#0E1B2E','#0F766E','#94A3B8'];
+  const n1=d.nodos.filter(n=>n.grado===1).length,n2=d.nodos.filter(n=>n.grado===2).length;
+  document.getElementById('mired-conteo').textContent=n1+' contactos directos y '+n2+' personas a un contacto de distancia';
+  const nodos=new vis.DataSet(d.nodos.map(n=>({id:n.id,label:n.nombre.split(' ')[0],title:n.nombre+' · '+(n.titular||''),
+   color:{background:col[n.grado],border:n.grado===0?'#5EEAD4':'#fff',highlight:{background:col[n.grado],border:'#F59E0B'}},
+   borderWidth:n.grado===0?4:2,size:n.grado===0?30:12+Math.min(n.grado_total,8)*1.8,
+   font:{size:n.grado===2?11:13,color:'#17233B',strokeWidth:3,strokeColor:'#fff'}})));
+  const aristas=new vis.DataSet(d.aristas.map((a,i)=>({id:i,from:a.a,to:a.b,
+   color:{color:(a.a===d.yo||a.b===d.yo)?'#0F766E':'#CBD5E1',highlight:'#F59E0B'},width:(a.a===d.yo||a.b===d.yo)?2.2:1})));
+  const red=new vis.Network(document.getElementById('mired'),{nodes:nodos,edges:aristas},{
+   physics:{solver:'forceAtlas2Based',forceAtlas2Based:{gravitationalConstant:-60,springLength:90,avoidOverlap:.7},stabilization:{iterations:200}},
+   interaction:{hover:true,tooltipDelay:150},nodes:{shape:'dot'},edges:{smooth:false}});
+  red.once('stabilizationIterationsDone',()=>red.fit({animation:true}));
+  red.on('click',p=>{
+   if(!p.nodes.length){panel.replaceChildren(el('p','font-bold text-slate-900','Explora tu red'),el('p','mt-1 muted','Haz clic en una persona para ver quién es y cómo llegas a ella.'));return}
+   const n=d.nodos.find(x=>x.id===p.nodes[0]);
+   const vec=d.aristas.filter(a=>a.a===n.id||a.b===n.id).map(a=>a.a===n.id?a.b:a.a).map(i=>d.nodos.find(x=>x.id===i).nombre);
+   const puente=n.grado===2?d.aristas.filter(a=>a.a===n.id||a.b===n.id).map(a=>a.a===n.id?a.b:a.a).filter(i=>d.aristas.some(a=>(a.a===d.yo&&a.b===i)||(a.b===d.yo&&a.a===i))).map(i=>d.nodos.find(x=>x.id===i).nombre):[];
+   panel.replaceChildren(
+    el('p','text-xs font-bold uppercase tracking-wider text-teal-700',['Eres tú','Contacto directo','A un contacto de distancia'][n.grado]),
+    el('p','mt-1 text-lg font-extrabold text-slate-900',n.nombre),el('p','text-slate-500',n.titular||''));
+   if(n.habilidades&&n.habilidades.length){const w=el('div','mt-3 flex flex-wrap gap-1.5');n.habilidades.forEach(h=>w.append(el('span','chip',h)));panel.append(w)}
+   panel.append(el('p','mt-3 text-slate-600',n.grado_total+' conexiones en RedPro'));
+   if(puente.length)panel.append(el('p','mt-3 rounded-xl bg-teal-50 p-3 text-xs font-semibold text-teal-900','Puedes llegar a '+n.nombre.split(' ')[0]+' a través de '+puente.join(' o ')+'.'));
+   const acc=el('div','mt-4 flex flex-wrap gap-2');
+   const a=el('a','btn2','Ver perfil');a.href='/usuario/'+n.id;acc.append(a);
+   if(n.grado===2){const f=el('form');f.method='post';f.action='/conectar/'+n.id;const h=el('input');h.type='hidden';h.name='_csrf';h.value=CSRF;
+    const b=el('button','btn','Conectar');f.append(h,b);acc.append(f)}
+   panel.append(acc);
+  });
+ }).catch(()=>{document.getElementById('mired-conteo').textContent='No se pudo cargar tu red.'});
+})();
+</script>
 <div class="grid gap-5 md:grid-cols-2">
 <section class="card"><h2 class="h2">Mis contactos ({{ contactos|length }})</h2>
  {% for c in contactos %}{{ persona(c) }}{% else %}<p class="py-3 text-sm text-stone-500">Todavía no tienes contactos. Busca personas arriba o conecta con las sugerencias.</p>{% endfor %}</section>

@@ -273,7 +273,7 @@ def inicio():
                          size([(u)-[:TIENE_HABILIDAD]->(h) | h]) AS habilidades,
                          size([(u)-[:POSTULA_A]->(o) | o]) AS postulaciones""", {"u": u})
     publicaciones = q("""MATCH (autor:Usuario)-[:PUBLICA_POST]->(p:Publicacion)
-                         RETURN p.id AS id, p.texto AS texto, p.fecha AS fecha,
+                         RETURN p.id AS id, p.texto AS texto, p.fecha AS fecha, p.tipo AS tipo,
                                 autor.id AS autor_id, autor.nombre AS autor,
                                 autor.titular AS titular
                          ORDER BY p.fecha DESC LIMIT 10""")
@@ -341,12 +341,23 @@ def empresa(id):
 def detalle_empleo(id):
     o = q1("""MATCH (e:Empresa)-[:PUBLICA]->(o:Oferta {id: $id})
               RETURN o.id AS id, o.titulo AS titulo, o.descripcion AS descripcion,
-                     e.id AS empresa_id, e.nombre AS empresa, e.sector AS sector,
-                     e.ciudad AS ciudad""", {"id": id})
+                     o.modalidad AS modalidad, o.salario AS salario, o.fecha AS fecha,
+                     o.ciudad AS ciudad_oferta, e.id AS empresa_id, e.nombre AS empresa,
+                     e.sector AS sector, e.tamano AS tamano, e.ciudad AS ciudad,
+                     e.descripcion AS empresa_desc""", {"id": id})
     if not o:
         return redirect("/empleos")
     o["hab"] = q("""MATCH (o:Oferta {id: $id})-[:REQUIERE]->(h:Habilidad)
-                    RETURN h.id AS id, h.nombre AS nombre""", {"id": id})
+                    OPTIONAL MATCH (:Usuario {id: $u})-[t:TIENE_HABILIDAD]->(h)
+                    RETURN h.id AS id, h.nombre AS nombre, t.nivel AS nivel, t IS NOT NULL AS tengo
+                    ORDER BY tengo DESC, h.nombre""", {"id": id, "u": session["uid"]})
+    o["cumple"] = sum(1 for h in o["hab"] if h["tengo"])
+    o["pct"] = round(100 * o["cumple"] / len(o["hab"])) if o["hab"] else 0
+    o["ruta"] = camino(session["uid"], "e", o["empresa_id"])
+    o["parecidas"] = q("""MATCH (o:Oferta {id: $id})-[:REQUIERE]->(h)<-[:REQUIERE]-(o2:Oferta)<-[:PUBLICA]-(e2:Empresa)
+                         WHERE o2 <> o
+                         RETURN o2.id AS id, o2.titulo AS titulo, e2.nombre AS empresa, count(h) AS en_comun
+                         ORDER BY en_comun DESC LIMIT 3""", {"id": id})
     o["postulado"] = bool(q1("""MATCH (:Usuario {id: $u})-[:POSTULA_A]->(:Oferta {id: $o})
                                 RETURN 1 AS ok""", {"u": session["uid"], "o": id}))
     o["conexiones"] = q("""MATCH (:Usuario {id: $u})-[:CONECTA_CON]-(c:Usuario)-[:TRABAJA_EN]->(:Empresa {id: $e})
@@ -378,7 +389,8 @@ def candidatos_empleo(id):
 @login
 def detalle_proyecto(id):
     p = q1("""MATCH (p:Proyecto {id: $id})
-              RETURN p.id AS id, p.nombre AS nombre, p.descripcion AS descripcion""",
+              RETURN p.id AS id, p.nombre AS nombre, p.descripcion AS descripcion,
+                     p.estado AS estado""",
            {"id": id})
     if not p:
         return redirect("/proyectos")
@@ -427,7 +439,7 @@ def pagina_empleos():
 @login
 def proyectos():
     ps = q("""MATCH (p:Proyecto)
-              RETURN p.id AS id, p.nombre AS nombre, p.descripcion AS descripcion,
+              RETURN p.id AS id, p.nombre AS nombre, p.descripcion AS descripcion, p.estado AS estado,
                      size([(p)<-[:PARTICIPA_EN]-(u) | u]) AS miembros,
                      size([(p)<-[:PARTICIPA_EN]-(:Usuario {id: $u}) | 1]) AS soy
               ORDER BY p.id""", {"u": session["uid"]})
@@ -444,7 +456,28 @@ def analitica():
     tot = {"usuarios": c("Usuario"), "conexiones": q1("MATCH ()-[r:CONECTA_CON]->() RETURN count(r) AS c")["c"],
            "empresas": c("Empresa"), "ofertas": c("Oferta"),
            "habilidades": c("Habilidad"), "proyectos": c("Proyecto")}
-    return render_template("analitica.html", infl=q(S["influyentes"]), demanda=q(S["demanda"]), comu=comunidades(), tot=tot)
+    extra = {
+        "modalidad": q("MATCH (o:Oferta) RETURN coalesce(o.modalidad, 'Sin indicar') AS nombre, count(o) AS n ORDER BY n DESC"),
+        "ciudades": q("MATCH (u:Usuario) RETURN coalesce(u.ciudad, 'Sin ciudad') AS nombre, count(u) AS n ORDER BY n DESC LIMIT 6"),
+        "estados": q("MATCH (p:Proyecto) RETURN coalesce(p.estado, 'Activo') AS nombre, count(p) AS n ORDER BY n DESC"),
+        "empresas": q("""MATCH (e:Empresa)
+                         RETURN e.nombre AS nombre, e.id AS id,
+                                size([(e)-[:PUBLICA]->(o) | o]) AS ofertas,
+                                size([(e)<-[:TRABAJA_EN]-(u) | u]) AS equipo,
+                                size([(e)-[:PUBLICA]->(:Oferta)<-[:POSTULA_A]-(u) | u]) AS postulaciones
+                         ORDER BY postulaciones DESC, ofertas DESC LIMIT 5"""),
+        "puentes": q("""MATCH (u:Usuario)-[:CONECTA_CON]-(v:Usuario)
+                        MATCH (u)-[:PERTENECE_A]->(c1:Comunidad), (v)-[:PERTENECE_A]->(c2:Comunidad)
+                        WHERE c1 <> c2
+                        RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular,
+                               count(DISTINCT c2) AS comunidades
+                        ORDER BY comunidades DESC, nombre LIMIT 5"""),
+    }
+    n, m = tot["usuarios"], tot["conexiones"]
+    tot["densidad"] = round(100 * 2 * m / (n * (n - 1)), 1) if n > 1 else 0
+    tot["promedio"] = round(2 * m / n, 1) if n else 0
+    return render_template("analitica.html", infl=q(S["influyentes"]), demanda=q(S["demanda"]),
+                           comu=comunidades(), tot=tot, extra=extra)
 
 @app.route("/grafo")
 @login
@@ -459,6 +492,28 @@ def api_grafo():
                         coalesce(n.titular, n.sector) AS detalle""")
     aristas = q("MATCH (a)-[r]->(b) RETURN labels(a)[0] AS ta, a.id AS ia, type(r) AS rel, labels(b)[0] AS tb, b.id AS ib")
     return jsonify(nodos=nodos, aristas=aristas, yo=session["uid"])
+
+@app.route("/api/mired")
+@login
+def api_mired():
+    """Mi red a 2 saltos: yo, mis contactos y los contactos de mis contactos (con puntos de contacto)."""
+    u = session["uid"]
+    nodos = q("""MATCH (yo:Usuario {id: $u})
+                 OPTIONAL MATCH (yo)-[:CONECTA_CON]-(c1:Usuario)
+                 OPTIONAL MATCH (c1)-[:CONECTA_CON]-(c2:Usuario)
+                 WHERE c2 <> yo AND NOT (yo)-[:CONECTA_CON]-(c2)
+                 WITH yo, collect(DISTINCT c1) AS n1, collect(DISTINCT c2) AS n2
+                 UNWIND ([yo] + n1 + n2) AS n
+                 WITH DISTINCT n, yo, n1
+                 RETURN n.id AS id, n.nombre AS nombre, n.titular AS titular,
+                        CASE WHEN n = yo THEN 0 WHEN n IN n1 THEN 1 ELSE 2 END AS grado,
+                        size([(n)-[:CONECTA_CON]-(x) | x]) AS grado_total,
+                        [(n)-[:TIENE_HABILIDAD]->(h) | h.nombre][0..3] AS habilidades""", {"u": u})
+    ids = [n["id"] for n in nodos if n["id"] is not None]
+    aristas = q("""MATCH (a:Usuario)-[:CONECTA_CON]->(b:Usuario)
+                   WHERE a.id IN $ids AND b.id IN $ids
+                   RETURN a.id AS a, b.id AS b""", {"ids": ids})
+    return jsonify(nodos=[n for n in nodos if n["id"] is not None], aristas=aristas, yo=u)
 
 # ---------- acciones (CRUD y relaciones) ----------
 @app.post("/perfil/editar")
