@@ -1,16 +1,16 @@
-{% extends "base.html" %}{% from "_ui.html" import persona, explica %}{% block c %}
+{% extends "base.html" %}{% from "_ui.html" import persona %}{% block c %}
 <div class="grid grid-cols-2 gap-4 md:grid-cols-4">{% for k, v in tot.items() %}<div class="card text-center"><p class="text-3xl font-extrabold text-teal-800">{{ v }}</p><p class="text-sm text-stone-500">{{ k }}</p></div>{% endfor %}</div>
 <div class="grid gap-5 md:grid-cols-2">
 <section class="card"><h2 class="h2">Usuarios más influyentes</h2>
  {% for p in infl %}<div class="flex items-center gap-3 py-2"><a href="/usuario/{{ p.id }}" class="w-36 shrink-0 truncate text-sm font-bold hover:underline">{{ p.nombre }}</a>
   <div class="h-3 flex-1 rounded-full bg-stone-100"><div class="h-3 rounded-full bg-teal-700" style="width:{{ (p.conexiones*100//(infl[0].conexiones or 1)) }}%"></div></div><span class="w-6 text-sm font-bold">{{ p.conexiones }}</span></div>{% endfor %}
- <div class="mt-3">{{ explica('Cómo se mide la influencia', 'Contamos las conexiones directas de cada persona (su grado en el grafo). Quien tiene más aristas CONECTA_CON es más influyente en esta medida simple.', sql.influyentes) }}</div></section>
+ </section>
 <section class="card"><h2 class="h2">Habilidades más demandadas</h2>
  {% for h in demanda %}<div class="flex items-center gap-3 py-2"><span class="w-32 shrink-0 truncate text-sm font-bold">{{ h.nombre }}</span>
   <div class="h-3 flex-1 rounded-full bg-stone-100"><div class="h-3 rounded-full bg-amber-500" style="width:{{ h.ofertas*100//demanda[0].ofertas }}%"></div></div><span class="w-28 text-right text-xs text-stone-600">{{ h.ofertas }} oferta{{ '' if h.ofertas==1 else 's' }} · {{ h.profesionales }} perfil{{ '' if h.profesionales==1 else 'es' }}</span></div>{% endfor %}
- <div class="mt-3">{{ explica('Cómo se mide la demanda', 'Para cada habilidad contamos cuántas ofertas apuntan a ella con REQUIERE. Al lado ves cuántos usuarios la tienen: si hay mucha demanda y pocos perfiles, es una oportunidad.', sql.demanda) }}</div></section></div>
+ </section></div>
 <section class="card"><h2 class="h2">Comunidades detectadas</h2><div class="mt-3 grid gap-4 md:grid-cols-3">
  {% for c in comu %}<div class="rounded-lg border border-stone-200 p-4"><p class="font-extrabold">Comunidad {{ loop.index }} · {{ c.miembros|length }} personas</p><p class="mt-1 text-sm text-stone-700">{{ c.miembros|join(', ') }}</p>
   <div class="mt-2 flex flex-wrap gap-2">{% for h in c.habilidades %}<span class="chip">{{ h }}</span>{% endfor %}</div></div>{% endfor %}</div>
- <div class="mt-3">{{ explica('Qué es una comunidad', 'Es un grupo de personas conectadas entre sí, directa o indirectamente, que no se conectan con el resto. Aquí se detecta leyendo las aristas CONECTA_CON y uniendo a cada pareja en el mismo grupo; en producción Neo4j ofrece algoritmos como Louvain. Debajo de cada comunidad, sus habilidades más comunes.', sql.comunidades) }}</div></section>
+ </section>
 {% endblock %}

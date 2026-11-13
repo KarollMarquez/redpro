@@ -1,11 +1,10 @@
-{% extends "base.html" %}{% from "_ui.html" import explica %}{% block c %}
+{% extends "base.html" %}{% block c %}
 <section class="card overflow-hidden !p-0">
  <div class="flex flex-wrap items-center gap-3 border-b border-slate-200 p-4"><div class="mr-auto"><h1 class="h2">Grafo completo de la red</h1><p id="conteo" class="text-xs text-slate-500">Cargando…</p></div>
   <input id="buscar" class="inp !w-56" placeholder="Buscar un nodo por nombre"><button id="centrar" class="btn2">Centrarme</button><button id="fisica" class="btn2">Congelar</button></div>
  <div id="filtros" class="flex flex-wrap gap-2 border-b border-slate-200 p-3"></div>
  <div class="grid md:grid-cols-[1fr_300px]"><div id="red" style="height:68vh" class="bg-slate-50"></div>
   <aside id="panel" class="max-h-[68vh] overflow-y-auto border-l border-slate-200 p-4 text-sm"><p class="text-slate-500">Haz clic en un nodo para ver con qué se conecta. Arrastra para moverlo y usa la rueda del ratón para acercar.</p></aside></div></section>
-{{ explica('Cómo leer este grafo', 'Cada punto es un nodo (una persona, empresa, habilidad, proyecto u oferta) y cada línea es una relación entre dos nodos. El tamaño del punto crece con su número de conexiones. Tu nodo aparece con borde oscuro. Al hacer clic en uno, se resaltan sus vecinos y se muestra el tipo de relación en cada línea.', sql.grafo) }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
 <script>
 const TIPOS={Usuario:['Personas','#0F766E'],Empresa:['Empresas','#D97706'],Habilidad:['Habilidades','#7C3AED'],Proyecto:['Proyectos','#2563EB'],Oferta:['Ofertas','#E11D48']};

@@ -1,24 +1,35 @@
-{% extends "base.html" %}{% from "_ui.html" import persona, conectar, explica, constelacion %}{% block c %}
-<section class="hero flex flex-wrap items-center justify-between gap-6 rounded-2xl p-8 shadow-lg">{{ constelacion() }}
- <div class="relative z-10"><h1 class="text-3xl font-extrabold tracking-tight">Hola, {{ yo.nombre.split()[0] }}</h1><p class="mt-1 text-teal-100">Esto es lo que tu red tiene para ti hoy.</p>
-  <a href="/grafo" class="mt-4 inline-flex rounded-full bg-white px-5 py-2 text-sm font-bold text-slate-900 hover:bg-teal-50">Ver mi red como grafo</a></div>
- <div class="relative z-10 flex gap-8 text-center">
-  <div><p class="text-4xl font-extrabold">{{ stats.contactos }}</p><p class="text-sm text-teal-100">contactos</p></div>
-  <div><p class="text-4xl font-extrabold">{{ stats.habilidades }}</p><p class="text-sm text-teal-100">habilidades</p></div>
-  <div><p class="text-4xl font-extrabold">{{ stats.postulaciones }}</p><p class="text-sm text-teal-100">postulaciones</p></div></div></section>
-{{ explica('Cómo funciona esta app', 'Cada persona, empresa, habilidad, proyecto y oferta es un nodo. Cada conexión, empleo, habilidad o postulación es una arista que une dos nodos. Las recomendaciones salen de recorrer esas aristas: amigos de amigos, habilidades en común, empresas donde trabajan tus contactos. En cada pantalla, abre los recuadros amarillos para ver qué se calcula y con qué consulta Cypher.') }}
-<div class="grid gap-5 md:grid-cols-2">
- <section class="card"><h2 class="h2">Personas que quizá conozcas</h2>
-  {% for p in sugeridos %}{% call persona(p) %}<div class="flex flex-wrap items-center gap-2">
-   {% if p.comunes %}<span class="chip">{{ p.comunes }} contacto{{ 's' if p.comunes>1 }} en común</span>{% endif %}
-   {% if p.compartidas %}<span class="chip">{{ p.compartidas }} habilidad{{ 'es' if p.compartidas>1 }} compartida{{ 's' if p.compartidas>1 }}</span>{% endif %}
-   {{ conectar(p.id) }}</div>{% endcall %}
-  {% else %}<p class="py-4 text-sm text-stone-600">Aún no hay sugerencias. <a class="font-bold text-teal-800 underline" href="/usuario/{{ yo.id }}">Agrega habilidades a tu perfil</a> o <a class="font-bold text-teal-800 underline" href="/red">busca personas</a>.</p>{% endfor %}
-  <div class="mt-3">{{ explica('¿Por qué me recomiendan a estas personas?', 'Sumamos dos señales: contactos en común (un recorrido de dos saltos: tú, un contacto tuyo y esa persona) y habilidades compartidas. Los contactos en común pesan el doble.', sql.sugeridos) }}</div></section>
- <section class="card"><h2 class="h2">Empleos para ti</h2>
-  {% for o in empleos %}<div class="flex items-center gap-3 border-b border-stone-100 py-3 last:border-0">
-   <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-sm font-extrabold text-teal-800">{{ o.pct }}%</div>
-   <div class="min-w-0 flex-1"><p class="font-bold">{{ o.titulo }}</p><p class="text-xs text-stone-500">{{ o.empresa }}{% if o.conocidos %} · conoces a {{ o.conocidos }} persona{{ 's' if o.conocidos>1 }} ahí{% endif %}</p></div>
-   <a href="/empleos" class="btn2">Ver</a></div>{% endfor %}
-  <div class="mt-3">{{ explica('¿Qué significa el porcentaje?', 'Es la parte de las habilidades que pide la oferta (arista REQUIERE) que tú ya tienes (arista TIENE_HABILIDAD). También contamos cuántos de tus contactos trabajan en esa empresa.', sql.empleos) }}</div></section>
-</div>{% endblock %}
+{% extends "base.html" %}{% from "_ui.html" import avatar, persona, conectar %}{% block c %}
+<div class="grid gap-5 lg:grid-cols-[230px_minmax(0,1fr)_250px]">
+ <aside class="space-y-4">
+  <section class="card overflow-hidden !p-0">
+   <div class="h-16 bg-gradient-to-br from-slate-900 via-cyan-900 to-teal-700"></div>
+   <div class="-mt-8 px-4 pb-4 text-center">
+    <div class="mx-auto w-fit rounded-full bg-white p-1">{{ avatar(yo.nombre, true) }}</div>
+    <h1 class="mt-2 font-extrabold">{{ yo.nombre }}</h1><p class="text-xs text-slate-500">{{ yo.titular or 'Completa tu perfil profesional' }}</p>
+    <p class="mt-1 text-xs text-slate-400">{{ yo.ciudad or 'Agrega tu ciudad' }}</p>
+   </div>
+   <div class="grid grid-cols-3 border-t border-slate-100 text-center text-xs"><a class="p-3 hover:bg-slate-50" href="/red"><b class="block text-base text-slate-900">{{ stats.contactos }}</b>Contactos</a><a class="border-x border-slate-100 p-3 hover:bg-slate-50" href="/usuario/{{ yo.id }}"><b class="block text-base text-slate-900">{{ stats.habilidades }}</b>Habilidades</a><a class="p-3 hover:bg-slate-50" href="/empleos"><b class="block text-base text-slate-900">{{ stats.postulaciones }}</b>Postulaciones</a></div>
+  </section>
+  <nav class="card !p-2 text-sm font-semibold text-slate-600"><a class="block rounded-xl px-3 py-2 hover:bg-slate-50" href="/usuario/{{ yo.id }}">Mi perfil</a><a class="block rounded-xl px-3 py-2 hover:bg-slate-50" href="/proyectos">Mis proyectos</a><a class="block rounded-xl px-3 py-2 hover:bg-slate-50" href="/grafo">Explorar el grafo</a></nav>
+ </aside>
+ <main class="min-w-0 space-y-4">
+  <section class="card">
+   <div class="flex items-center gap-3">{{ avatar(yo.nombre) }}<div class="flex-1 rounded-full bg-slate-50 px-4 py-3 text-sm text-slate-400">Comparte algo con tu red...</div></div>
+   <div class="mt-4 flex gap-2 border-t border-slate-100 pt-3 text-sm font-semibold text-slate-500"><a class="flex-1 rounded-lg px-3 py-2 text-center hover:bg-slate-50" href="/proyectos">✦ Compartir proyecto</a><a class="flex-1 rounded-lg px-3 py-2 text-center hover:bg-slate-50" href="/empleos">▣ Publicar oferta</a></div>
+  </section>
+  <div class="flex items-center justify-between px-1"><h2 class="h2">Lo más relevante para ti</h2><a class="text-sm font-bold text-teal-700 hover:underline" href="/red">Ver mi red</a></div>
+  {% for p in sugeridos[:2] %}<article class="card">
+   <div class="flex items-start gap-3"><a href="/usuario/{{ p.id }}">{{ avatar(p.nombre) }}</a><div class="min-w-0 flex-1"><a class="font-extrabold hover:underline" href="/usuario/{{ p.id }}">{{ p.nombre }}</a><p class="text-xs text-slate-500">{{ p.titular }}</p><p class="mt-3 text-sm leading-relaxed text-slate-700">Podría ser una buena conexión para ti{% if p.comunes %}: tienen {{ p.comunes }} contacto{{ 's' if p.comunes != 1 }} en común{% endif %}{% if p.compartidas %} y {{ p.compartidas }} habilidad{{ 'es' if p.compartidas != 1 }} compartida{{ 's' if p.compartidas != 1 }}{% endif %}.</p><div class="mt-3 flex flex-wrap items-center gap-2">{% if p.comunes %}<span class="chip">{{ p.comunes }} en común</span>{% endif %}{% if p.compartidas %}<span class="chip">{{ p.compartidas }} habilidades compartidas</span>{% endif %}{{ conectar(p.id) }}</div></div><span class="text-xs text-slate-400">Sugerencia</span></div>
+  </article>{% endfor %}
+  {% for o in empleos[:2] %}<article class="card">
+   <div class="flex items-start gap-3"><div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-sm font-extrabold text-teal-800">{{ o.pct }}%</div><div class="min-w-0 flex-1"><p class="text-xs font-bold uppercase tracking-wider text-teal-700">Oferta recomendada</p><h3 class="mt-1 text-lg font-extrabold">{{ o.titulo }}</h3><p class="text-sm text-slate-600"><a class="font-semibold text-teal-700 hover:underline" href="/empresa/{{ o.empresa_id }}">{{ o.empresa }}</a>{% if o.conocidos %} · {{ o.conocidos }} contacto{{ 's' if o.conocidos != 1 }} en la empresa{% endif %}</p>{% if o.descripcion %}<p class="mt-3 text-sm leading-relaxed text-slate-700">{{ o.descripcion }}</p>{% endif %}<div class="mt-3 flex flex-wrap gap-2">{% for h in o.hab[:4] %}<span class="chip {{ '!bg-teal-700 !text-white' if h.tengo else '' }}">{{ h.nombre }}</span>{% endfor %}</div></div><a class="btn2 shrink-0" href="/empleos">Ver</a></div>
+  </article>{% endfor %}
+  {% if not sugeridos and not empleos %}<section class="card text-center"><h2 class="h2">Tu feed está listo para crecer</h2><p class="mt-2 text-sm text-slate-500">Agrega habilidades y conecta con profesionales para recibir recomendaciones.</p><a class="btn mt-4" href="/usuario/{{ yo.id }}">Completar perfil</a></section>{% endif %}
+ </main>
+ <aside class="space-y-4">
+  <section class="card"><h2 class="h2">Tendencias en RedPro</h2><div class="mt-4 space-y-4 text-sm"><a class="block hover:text-teal-700" href="/empleos"><p class="font-bold">Habilidades más buscadas</p><p class="mt-1 text-xs text-slate-500">Descubre oportunidades que encajan contigo.</p></a><a class="block hover:text-teal-700" href="/proyectos"><p class="font-bold">Proyectos de la comunidad</p><p class="mt-1 text-xs text-slate-500">Encuentra personas con las que colaborar.</p></a><a class="block hover:text-teal-700" href="/analitica"><p class="font-bold">Analítica de la red</p><p class="mt-1 text-xs text-slate-500">Conoce las conexiones y habilidades de la comunidad.</p></a></div></section>
+  <section class="card"><h2 class="h2">Tu red</h2><p class="mt-2 text-sm text-slate-500">Tienes {{ stats.contactos }} contactos y {{ stats.postulaciones }} postulaciones activas.</p><a class="btn mt-4 w-full justify-center" href="/red">Ver quién está cerca</a></section>
+  <p class="px-2 text-center text-xs text-slate-400">RedPro · Conecta talento, proyectos y oportunidades</p>
+ </aside>
+</div>
+{% endblock %}

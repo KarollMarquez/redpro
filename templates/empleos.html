@@ -1,10 +1,10 @@
-{% extends "base.html" %}{% from "_ui.html" import persona, explica, checks %}{% block c %}
-{{ explica('Cómo se ordenan las ofertas', 'Cada oferta apunta con aristas REQUIERE a las habilidades que pide. Comparamos esas habilidades con las tuyas y mostramos el porcentaje de coincidencia. Abajo de cada oferta, “candidatos sugeridos” hace lo mismo al revés: busca personas cuyas habilidades encajan y, como desempate, que tengan contactos dentro de la empresa.', sql.empleos) }}
+{% extends "base.html" %}{% from "_ui.html" import persona, checks %}{% block c %}
+<section class="hero rounded-2xl p-7 shadow-lg"><p class="text-sm font-bold uppercase tracking-[.2em] text-teal-200">Oportunidades para ti</p><h1 class="mt-2 text-3xl font-extrabold">Encuentra tu próximo reto</h1><p class="mt-2 max-w-2xl text-teal-100">Explora ofertas conectadas con tus habilidades y descubre quién de tu red ya está cerca.</p></section>
 <div class="grid gap-5 md:grid-cols-3"><div class="space-y-4 md:col-span-2">
 {% for o in ofertas %}<article class="card"><div class="flex items-start gap-4">
  <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-lg font-extrabold text-teal-800">{{ o.pct }}%</div>
- <div class="min-w-0 flex-1"><h2 class="text-lg font-extrabold">{{ o.titulo }}</h2><p class="text-sm text-stone-600">{{ o.empresa }}{% if o.conocidos %} · conoces a {{ o.conocidos }} persona{{ 's' if o.conocidos>1 }} ahí{% endif %}</p>
-  <p class="mt-2 text-sm">{{ o.descripcion }}</p>
+ <div class="min-w-0 flex-1"><h2 class="text-lg font-extrabold">{{ o.titulo }}</h2><p class="text-sm text-stone-600"><a class="font-semibold text-teal-700 hover:underline" href="/empresa/{{ o.empresa_id }}">{{ o.empresa }}</a>{% if o.conocidos %} · conoces a {{ o.conocidos }} persona{{ 's' if o.conocidos>1 }} ahí{% endif %}</p>
+  {% if o.descripcion %}<p class="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">{{ o.descripcion }}</p>{% endif %}
   <div class="mt-3 flex flex-wrap gap-2">{% for h in o.hab %}<span class="chip {{ '!bg-teal-700 !text-white' if h.tengo else '!bg-stone-100 !text-stone-500' }}">{{ h.nombre }}</span>{% endfor %}</div></div>
  {% if o.postulado %}<span class="chip">Postulado</span>{% else %}<form method="post" action="/postular/{{ o.id }}"><input type="hidden" name="_csrf" value="{{ csrf() }}"><button class="btn">Postularme</button></form>{% endif %}</div>
  <details class="mt-4 border-t border-stone-100 pt-3"><summary class="cursor-pointer text-sm font-bold text-teal-800">Candidatos sugeridos para esta oferta</summary>

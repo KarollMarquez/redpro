@@ -188,7 +188,9 @@ def login(f):
 
 @app.context_processor
 def ctx():
-    yo = q1("MATCH (u:Usuario {id: $id}) RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular", {"id": session["uid"]}) if "uid" in session else None
+    yo = q1("""MATCH (u:Usuario {id: $id})
+               RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular,
+                      u.ciudad AS ciudad""", {"id": session["uid"]}) if "uid" in session else None
     return dict(yo=yo, sql=S, csrf=csrf)
 
 def volver(msg=None, cat="ok"):
@@ -268,6 +270,24 @@ def usuario(id):
         comunes=q(S["comunes"], {"u": u, "o": id}) if id != u else [],
         empresas=q("MATCH (e:Empresa) RETURN e.id AS id, e.nombre AS nombre ORDER BY e.nombre"),
         todas=q("MATCH (h:Habilidad) RETURN h.nombre AS nombre ORDER BY h.nombre"))
+
+@app.route("/empresa/<int:id>")
+@login
+def empresa(id):
+    e = q1("""MATCH (e:Empresa {id: $id})
+              RETURN e.id AS id, e.nombre AS nombre, e.sector AS sector,
+                     e.ciudad AS ciudad""", {"id": id})
+    if not e:
+        return redirect("/empleos")
+    return render_template("empresa.html", e=e,
+        ofertas=q("""MATCH (e:Empresa {id: $id})-[:PUBLICA]->(o:Oferta)
+                     RETURN o.id AS id, o.titulo AS titulo,
+                            o.descripcion AS descripcion
+                     ORDER BY o.id DESC""", {"id": id}),
+        equipo=q("""MATCH (u:Usuario)-[t:TRABAJA_EN]->(e:Empresa {id: $id})
+                    RETURN u.id AS id, u.nombre AS nombre,
+                           u.titular AS titular, t.cargo AS cargo
+                    ORDER BY u.nombre""", {"id": id}))
 
 @app.route("/red")
 @login
