@@ -1,6 +1,7 @@
 """RedPro: red profesional sobre una base de datos de grafos (Neo4j) + Flask.
 Ejecutar:  python init_db.py   y luego   python app.py"""
 import os, re, time, secrets
+from datetime import datetime, timezone
 from functools import wraps
 from neo4j import GraphDatabase
 from flask import Flask, render_template, request, redirect, session, flash, abort, jsonify
@@ -137,7 +138,6 @@ def empleos(u):
     for o in r:
         o["pct"] = round(100 * o["cumple"] / o["req"]) if o["req"] else 0
         o["hab"] = q(S["hab_oferta"], {"u": u, "o": o["id"]})
-        o["cand"] = q(S["candidatos"], {"o": o["id"], "e": o["empresa_id"]})
     return sorted(r, key=lambda o: (-o["pct"], -o["conocidos"]))
 
 # ---------- seguridad y validaciones ----------
@@ -202,6 +202,12 @@ def volver(msg=None, cat="ok"):
 def entrada():
     if "uid" in session:
         return redirect("/inicio")
+    return render_template("landing.html")
+
+@app.route("/login")
+def pagina_login():
+    if "uid" in session:
+        return redirect("/inicio")
     return render_template("auth.html", modo=request.args.get("modo", "ingresar"))
 
 @app.post("/ingresar")
@@ -209,7 +215,7 @@ def ingresar():
     email = request.form["email"].strip().lower()
     if bloqueado(email):
         flash("Demasiados intentos fallidos. Espera 5 minutos e inténtalo de nuevo.", "err")
-        return redirect("/")
+        return redirect("/login")
     u = q1("MATCH (u:Usuario {email: $e}) RETURN u.id AS id, u.clave AS clave", {"e": email})
     if u and check_password_hash(u["clave"], request.form["clave"]):
         INTENTOS.pop(email, None)
@@ -217,7 +223,7 @@ def ingresar():
         return redirect("/inicio")
     INTENTOS[email] = (INTENTOS.get(email, (0, 0))[0] + 1, time.time())
     flash("Correo o contraseña incorrectos.", "err")
-    return redirect("/")
+    return redirect("/login")
 
 @app.post("/registro")
 def registro():
@@ -227,10 +233,10 @@ def registro():
     if errores:
         for e in errores:
             flash(e, "err")
-        return redirect("/?modo=registro")
+        return redirect("/login?modo=registro")
     if q1("MATCH (u:Usuario {email: $e}) RETURN u.id AS id", {"e": email}):
         flash("Ese correo ya tiene cuenta. Ingresa con él.", "err")
-        return redirect("/?modo=registro")
+        return redirect("/login?modo=registro")
     uid = nuevo_id("Usuario")
     x("CREATE (:Usuario {id: $id, nombre: $n, email: $e, clave: $c, titular: $t, ciudad: $ci})",
       {"id": uid, "n": f["nombre"].strip()[:80], "e": email, "c": generate_password_hash(f["clave"]), "t": f.get("titular", "").strip()[:120], "ci": f.get("ciudad", "").strip()[:60]})
@@ -252,7 +258,28 @@ def inicio():
                   RETURN size([(u)-[:CONECTA_CON]-(c) | c]) AS contactos,
                          size([(u)-[:TIENE_HABILIDAD]->(h) | h]) AS habilidades,
                          size([(u)-[:POSTULA_A]->(o) | o]) AS postulaciones""", {"u": u})
-    return render_template("inicio.html", stats=stats, sugeridos=q(S["sugeridos"], {"u": u}), empleos=empleos(u)[:3])
+    publicaciones = q("""MATCH (autor:Usuario)-[:PUBLICA_POST]->(p:Publicacion)
+                         RETURN p.id AS id, p.texto AS texto, p.fecha AS fecha,
+                                autor.id AS autor_id, autor.nombre AS autor,
+                                autor.titular AS titular
+                         ORDER BY p.fecha DESC LIMIT 10""")
+    return render_template("inicio.html", stats=stats, sugeridos=q(S["sugeridos"], {"u": u}),
+        empleos=empleos(u)[:3], publicaciones=publicaciones)
+
+@app.post("/publicar")
+@login
+def publicar():
+    texto = request.form.get("texto", "").strip()
+    if not texto:
+        return volver("Escribe algo antes de publicar.", "err")
+    if len(texto) > 1000:
+        return volver("La publicación no puede superar 1000 caracteres.", "err")
+    x("""CREATE (p:Publicacion {id: $id, texto: $texto, fecha: $fecha})
+         WITH p MATCH (u:Usuario {id: $u})
+         CREATE (u)-[:PUBLICA_POST]->(p)""",
+      {"id": nuevo_id("Publicacion"), "texto": texto,
+       "fecha": datetime.now(timezone.utc).isoformat(), "u": session["uid"]})
+    return volver("Publicación compartida.")
 
 @app.route("/usuario/<int:id>")
 @login
@@ -279,7 +306,9 @@ def empresa(id):
                      e.ciudad AS ciudad""", {"id": id})
     if not e:
         return redirect("/empleos")
-    return render_template("empresa.html", e=e,
+    es_equipo = bool(q1("""MATCH (:Usuario {id: $u})-[:TRABAJA_EN]->(:Empresa {id: $e})
+                            RETURN 1 AS ok""", {"u": session["uid"], "e": id}))
+    return render_template("empresa.html", e=e, es_equipo=es_equipo,
         ofertas=q("""MATCH (e:Empresa {id: $id})-[:PUBLICA]->(o:Oferta)
                      RETURN o.id AS id, o.titulo AS titulo,
                             o.descripcion AS descripcion
@@ -288,6 +317,57 @@ def empresa(id):
                     RETURN u.id AS id, u.nombre AS nombre,
                            u.titular AS titular, t.cargo AS cargo
                     ORDER BY u.nombre""", {"id": id}))
+
+@app.route("/empleo/<int:id>")
+@login
+def detalle_empleo(id):
+    o = q1("""MATCH (e:Empresa)-[:PUBLICA]->(o:Oferta {id: $id})
+              RETURN o.id AS id, o.titulo AS titulo, o.descripcion AS descripcion,
+                     e.id AS empresa_id, e.nombre AS empresa, e.sector AS sector,
+                     e.ciudad AS ciudad""", {"id": id})
+    if not o:
+        return redirect("/empleos")
+    o["hab"] = q("""MATCH (o:Oferta {id: $id})-[:REQUIERE]->(h:Habilidad)
+                    RETURN h.id AS id, h.nombre AS nombre""", {"id": id})
+    o["postulado"] = bool(q1("""MATCH (:Usuario {id: $u})-[:POSTULA_A]->(:Oferta {id: $o})
+                                RETURN 1 AS ok""", {"u": session["uid"], "o": id}))
+    return render_template("empleo_detalle.html", o=o)
+
+@app.route("/empleo/<int:id>/candidatos")
+@login
+def candidatos_empleo(id):
+    o = q1("""MATCH (e:Empresa)-[:PUBLICA]->(o:Oferta {id: $id})
+              RETURN o.id AS id, o.titulo AS titulo, e.id AS empresa_id,
+                     e.nombre AS empresa""", {"id": id})
+    if not o:
+        return redirect("/empleos")
+    es_equipo = bool(q1("""MATCH (:Usuario {id: $u})-[:TRABAJA_EN]->(:Empresa {id: $e})
+                           RETURN 1 AS ok""", {"u": session["uid"], "e": o["empresa_id"]}))
+    if not es_equipo:
+        abort(403)
+    return render_template("candidatos.html", o=o,
+        candidatos=q("""MATCH (u:Usuario)-[:POSTULA_A]->(o:Oferta {id: $id})
+                        OPTIONAL MATCH (u)-[:TIENE_HABILIDAD]->(h:Habilidad)<-[:REQUIERE]-(o)
+                        WITH u, count(DISTINCT h) AS coincidencias
+                        RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular,
+                               coincidencias
+                        ORDER BY coincidencias DESC, u.nombre""", {"id": id}))
+
+@app.route("/proyecto/<int:id>")
+@login
+def detalle_proyecto(id):
+    p = q1("""MATCH (p:Proyecto {id: $id})
+              RETURN p.id AS id, p.nombre AS nombre, p.descripcion AS descripcion""",
+           {"id": id})
+    if not p:
+        return redirect("/proyectos")
+    p["tec"] = q("""MATCH (p:Proyecto {id: $id})-[:USA_TECNOLOGIA]->(h)
+                    RETURN h.id AS id, h.nombre AS nombre ORDER BY h.nombre""", {"id": id})
+    p["miembros"] = q("""MATCH (u:Usuario)-[:PARTICIPA_EN]->(:Proyecto {id: $id})
+                         RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular
+                         ORDER BY u.nombre""", {"id": id})
+    p["rel"] = q(S["proyectos_rel"], {"p": id})
+    return render_template("proyecto_detalle.html", p=p)
 
 @app.route("/red")
 @login

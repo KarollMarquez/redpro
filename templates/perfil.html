@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% from "_ui.html" import avatar, persona, constelacion %}{% block c %}
-<section class="card overflow-visible !p-0"><div class="hero h-36 rounded-t-2xl">{{ constelacion() }}</div><div class="relative flex flex-wrap items-start gap-5 p-6 pt-0">{{ avatar(p.nombre, true) }}
+<section class="card overflow-visible !p-0"><div class="hero h-36 rounded-t-2xl">{{ constelacion() }}</div><div class="relative flex flex-wrap items-start gap-5 p-6 pt-0">{{ avatar(p.nombre, true, p.id) }}
  <div class="min-w-0 flex-1 pt-5"><p class="text-xs font-bold uppercase tracking-[.18em] text-teal-700">Perfil profesional</p><h1 class="text-2xl font-extrabold">{{ p.nombre }}</h1><p class="text-stone-700">{{ p.titular or 'Sin titular todavía' }}</p>
   <p class="text-sm text-stone-500">{{ p.ciudad or 'Ubicación no registrada' }} · {{ n_con }} contacto{{ '' if n_con==1 else 's' }}</p>
   {% if p.bio %}<p class="mt-3 max-w-xl text-sm leading-relaxed">{{ p.bio }}</p>{% endif %}</div>

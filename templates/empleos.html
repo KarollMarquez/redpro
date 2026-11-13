@@ -3,12 +3,10 @@
 <div class="grid gap-5 md:grid-cols-3"><div class="space-y-4 md:col-span-2">
 {% for o in ofertas %}<article class="card"><div class="flex items-start gap-4">
  <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-lg font-extrabold text-teal-800">{{ o.pct }}%</div>
- <div class="min-w-0 flex-1"><h2 class="text-lg font-extrabold">{{ o.titulo }}</h2><p class="text-sm text-stone-600"><a class="font-semibold text-teal-700 hover:underline" href="/empresa/{{ o.empresa_id }}">{{ o.empresa }}</a>{% if o.conocidos %} · conoces a {{ o.conocidos }} persona{{ 's' if o.conocidos>1 }} ahí{% endif %}</p>
+ <div class="min-w-0 flex-1"><h2 class="text-lg font-extrabold"><a href="/empleo/{{ o.id }}" class="hover:text-teal-700">{{ o.titulo }}</a></h2><p class="text-sm text-stone-600"><a class="font-semibold text-teal-700 hover:underline" href="/empresa/{{ o.empresa_id }}">{{ o.empresa }}</a>{% if o.conocidos %} · conoces a {{ o.conocidos }} persona{{ 's' if o.conocidos>1 }} ahí{% endif %}</p>
   {% if o.descripcion %}<p class="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">{{ o.descripcion }}</p>{% endif %}
   <div class="mt-3 flex flex-wrap gap-2">{% for h in o.hab %}<span class="chip {{ '!bg-teal-700 !text-white' if h.tengo else '!bg-stone-100 !text-stone-500' }}">{{ h.nombre }}</span>{% endfor %}</div></div>
- {% if o.postulado %}<span class="chip">Postulado</span>{% else %}<form method="post" action="/postular/{{ o.id }}"><input type="hidden" name="_csrf" value="{{ csrf() }}"><button class="btn">Postularme</button></form>{% endif %}</div>
- <details class="mt-4 border-t border-stone-100 pt-3"><summary class="cursor-pointer text-sm font-bold text-teal-800">Candidatos sugeridos para esta oferta</summary>
-  {% for c in o.cand %}{% call persona(c) %}<span class="chip">{{ c.cumple }} de {{ o.req }} habilidades</span>{% if c.conexiones %} <span class="chip">{{ c.conexiones }} contacto{{ 's' if c.conexiones>1 }} en la empresa</span>{% endif %}{% endcall %}{% else %}<p class="py-2 text-sm text-stone-500">Nadie cumple aún con estas habilidades.</p>{% endfor %}</details></article>{% endfor %}</div>
+ {% if o.postulado %}<span class="chip">Postulado</span>{% else %}<a class="btn" href="/empleo/{{ o.id }}">Ver oferta</a>{% endif %}</div></article>{% endfor %}</div>
 <aside><form method="post" action="/oferta/crear" class="card sticky top-20 space-y-3"><input type="hidden" name="_csrf" value="{{ csrf() }}"><h2 class="h2">Publicar una oferta</h2>
  <select class="inp" name="empresa_id"><option value="">Empresa existente…</option>{% for e in empresas %}<option value="{{ e.id }}">{{ e.nombre }}</option>{% endfor %}</select>
  <p class="text-center text-xs text-stone-500">o registra una empresa nueva</p>

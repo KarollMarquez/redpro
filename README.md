@@ -3,6 +3,9 @@
 Red profesional construida con Flask y Neo4j. El frontend se sirve desde Flask
 mediante plantillas HTML y Tailwind CSS.
 
+Incluye feed de publicaciones, perfiles profesionales y de empresa, ofertas con
+detalle, postulaciones, proyectos, recomendaciones y exploración visual del grafo.
+
 ## Ejecución local
 
 Instala las dependencias:
@@ -25,6 +28,10 @@ Carga los datos de ejemplo una sola vez:
 ```powershell
 python init_db.py
 ```
+
+El script también carga publicaciones de ejemplo para el feed. Si cambias
+`seed.cypher`, vuelve a ejecutarlo contra una base de datos de desarrollo o
+acepta que se eliminarán y recrearán los datos de la aplicación.
 
 Inicia Flask:
 

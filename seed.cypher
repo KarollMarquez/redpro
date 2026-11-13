@@ -7,6 +7,7 @@ CREATE CONSTRAINT empresa_id IF NOT EXISTS FOR (n:Empresa) REQUIRE n.id IS UNIQU
 CREATE CONSTRAINT habilidad_id IF NOT EXISTS FOR (n:Habilidad) REQUIRE n.id IS UNIQUE;
 CREATE CONSTRAINT proyecto_id IF NOT EXISTS FOR (n:Proyecto) REQUIRE n.id IS UNIQUE;
 CREATE CONSTRAINT oferta_id IF NOT EXISTS FOR (n:Oferta) REQUIRE n.id IS UNIQUE;
+CREATE CONSTRAINT publicacion_id IF NOT EXISTS FOR (n:Publicacion) REQUIRE n.id IS UNIQUE;
 
 // ---- NODOS ----
 UNWIND [
@@ -60,3 +61,14 @@ MATCH (o:Oferta {id:r[0]}), (h:Habilidad {id:r[1]}) CREATE (o)-[:REQUIERE]->(h);
 
 UNWIND [[4,2],[5,2],[6,3]] AS r
 MATCH (u:Usuario {id:r[0]}), (o:Oferta {id:r[1]}) CREATE (u)-[:POSTULA_A]->(o);
+
+// ---- PUBLICACIONES DEL FEED ----
+UNWIND [
+ [1,1,'Estoy construyendo nuevas conexiones y aprendiendo cada día sobre desarrollo de productos. ¿Qué proyecto te tiene motivado esta semana?','2026-01-15T10:00:00Z'],
+ [2,2,'Terminamos una primera versión de nuestra API para inventarios. Buscamos personas interesadas en backend y datos para probarla.','2026-01-14T16:30:00Z'],
+ [5,3,'Compartir conocimiento abre puertas. Esta semana estoy explorando Machine Learning aplicado a problemas reales de negocios.','2026-01-13T12:15:00Z'],
+ [9,4,'¿Alguien está trabajando en proyectos de frontend accesibles? Me encantaría conocer experiencias y buenas prácticas.','2026-01-12T09:45:00Z']
+] AS r
+MATCH (u:Usuario {id:r[0]})
+CREATE (p:Publicacion {id:r[1], texto:r[2], fecha:r[3]})
+CREATE (u)-[:PUBLICA_POST]->(p);

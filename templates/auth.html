@@ -9,8 +9,8 @@
   <div class="mb-6 md:hidden">{{ logo() }}</div>
   <div class="card !p-8">
   <div class="mb-6 flex gap-6 border-b border-slate-200 text-sm font-bold">
-   <a href="/" class="pb-3 {{ 'border-b-2 border-teal-600 text-teal-700' if modo!='registro' else 'text-slate-500' }}">Ingresar</a>
-   <a href="/?modo=registro" class="pb-3 {{ 'border-b-2 border-teal-600 text-teal-700' if modo=='registro' else 'text-slate-500' }}">Crear cuenta</a></div>
+   <a href="/login" class="pb-3 {{ 'border-b-2 border-teal-600 text-teal-700' if modo!='registro' else 'text-slate-500' }}">Ingresar</a>
+   <a href="/login?modo=registro" class="pb-3 {{ 'border-b-2 border-teal-600 text-teal-700' if modo=='registro' else 'text-slate-500' }}">Crear cuenta</a></div>
   {% for cat, m in get_flashed_messages(with_categories=true) %}<div class="mb-4 rounded-xl px-4 py-3 text-sm font-semibold {{ 'bg-rose-50 text-rose-800 ring-1 ring-rose-200' if cat=='err' else 'bg-teal-50 text-teal-900' }}" role="alert">{{ m }}</div>{% endfor %}
   {% if modo=='registro' %}
   <form method="post" action="/registro" class="space-y-3" autocomplete="off"><input type="hidden" name="_csrf" value="{{ csrf() }}">

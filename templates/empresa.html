@@ -2,11 +2,11 @@
 <section class="card overflow-visible !p-0">
  <div class="hero h-36 rounded-t-2xl">{{ constelacion() }}</div>
  <div class="relative flex flex-wrap items-start gap-5 p-6 pt-0">
-  {{ avatar(e.nombre, true) }}
+  {{ avatar(e.nombre, true, e.id, 'company') }}
   <div class="min-w-0 flex-1 pt-5">
    <p class="text-xs font-bold uppercase tracking-[.18em] text-amber-600">Empresa</p>
    <h1 class="text-2xl font-extrabold">{{ e.nombre }}</h1>
-   <p class="mt-1 text-slate-600">{{ e.sector or 'Sector no registrado' }} · {{ e.ciudad or 'Ubicación no registrada' }}</p>
+   <p class="mt-1 text-slate-600">{{ e.sector or 'Sector no registrado' }} · {{ e.ciudad or 'Ubicación no registrada' }}</p>{% if es_equipo %}<a class="mt-3 inline-flex text-sm font-bold text-teal-700 hover:underline" href="/empleos">Administrar mis ofertas →</a>{% endif %}
   </div>
  </div>
 </section>
@@ -14,7 +14,7 @@
  <section class="card md:col-span-2">
   <div class="flex items-center justify-between"><h2 class="h2">Ofertas abiertas</h2><span class="chip">{{ ofertas|length }} oferta{{ '' if ofertas|length == 1 else 's' }}</span></div>
   <div class="mt-4 space-y-3">
-   {% for o in ofertas %}<article class="rounded-2xl border border-slate-200 p-4"><h3 class="font-extrabold">{{ o.titulo }}</h3>{% if o.descripcion %}<p class="mt-2 text-sm leading-relaxed text-slate-600">{{ o.descripcion }}</p>{% endif %}<a class="mt-3 inline-flex text-sm font-bold text-teal-700 hover:underline" href="/empleos">Ver oferta y postularme →</a></article>
+   {% for o in ofertas %}<article class="rounded-2xl border border-slate-200 p-4"><h3 class="font-extrabold">{{ o.titulo }}</h3>{% if o.descripcion %}<p class="mt-2 text-sm leading-relaxed text-slate-600">{{ o.descripcion }}</p>{% endif %}<div class="mt-3 flex flex-wrap gap-4"><a class="inline-flex text-sm font-bold text-teal-700 hover:underline" href="/empleo/{{ o.id }}">Ver oferta →</a>{% if es_equipo %}<a class="inline-flex text-sm font-bold text-indigo-700 hover:underline" href="/empleo/{{ o.id }}/candidatos">Ver candidatos →</a>{% endif %}</div></article>
    {% else %}<p class="text-sm text-slate-500">Esta empresa todavía no tiene ofertas publicadas.</p>{% endfor %}
   </div>
  </section>

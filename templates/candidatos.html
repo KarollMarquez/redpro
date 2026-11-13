@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% from "_ui.html" import persona %}{% block c %}
+<a href="/empleos" class="text-sm font-bold text-teal-700 hover:underline">← Volver a empleos</a>
+<section class="card mt-4"><p class="text-xs font-bold uppercase tracking-[.18em] text-teal-700">Panel de empresa</p><h1 class="mt-2 text-2xl font-extrabold">Candidatos para {{ o.titulo }}</h1><p class="text-sm text-slate-500">{{ o.empresa }}</p><div class="mt-5 divide-y divide-slate-100">{% for c in candidatos %}{% call persona(c) %}<span class="chip">{{ c.coincidencias }} habilidad{{ '' if c.coincidencias == 1 else 'es' }} coincidente{{ '' if c.coincidencias == 1 else 's' }}</span>{% endcall %}{% else %}<p class="py-5 text-sm text-slate-500">Todavía no hay postulaciones para esta oferta.</p>{% endfor %}</div></section>
+{% endblock %}
