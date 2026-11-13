@@ -2,15 +2,22 @@
 <title>RedPro</title><script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
 <style type="text/tailwindcss">
-body{font-family:Figtree,system-ui,sans-serif;background:#EEF1F5;color:#1e293b}
+*{box-sizing:border-box}
+body{font-family:Figtree,system-ui,sans-serif;background:#F4F7FA;color:#17233B;-webkit-font-smoothing:antialiased}
+img{display:block}
+button,a{transition:all .18s ease}
 .hero{background:linear-gradient(135deg,#0E1B2E 0%,#123B54 55%,#0F766E 100%);color:#fff;position:relative;overflow:hidden}
-.card{@apply rounded-2xl bg-white p-6 ring-1 ring-slate-200/70 shadow-[0_1px_2px_rgba(14,27,46,.06),0_14px_30px_-18px_rgba(14,27,46,.28)]}
+.card{@apply rounded-3xl bg-white p-6 ring-1 ring-slate-200/70 shadow-[0_1px_2px_rgba(14,27,46,.05),0_18px_38px_-22px_rgba(14,27,46,.24)]}
+.card-hover{@apply transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_30px_-18px_rgba(14,27,46,.38)]}
 .btn{@apply inline-flex items-center rounded-full bg-teal-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600}
 .btn2{@apply inline-flex items-center rounded-full border border-teal-600 px-4 py-1.5 text-sm font-bold text-teal-700 transition hover:bg-teal-50}
 .btn3{@apply text-sm font-semibold text-rose-700 hover:underline}
 .inp{@apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/25}
 .chip{@apply inline-block rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800}
 .h2{@apply text-lg font-extrabold tracking-tight text-slate-900}
+.eyebrow{@apply text-xs font-bold uppercase tracking-[.18em] text-teal-700}
+.muted{@apply text-sm leading-relaxed text-slate-500}
+.avatar-photo{@apply shrink-0 rounded-full object-cover object-center ring-1 ring-slate-200}
 </style></head><body>
 {% if yo %}
 <header class="sticky top-0 z-20 bg-[#0E1B2E] shadow-lg">
@@ -26,7 +33,7 @@ body{font-family:Figtree,system-ui,sans-serif;background:#EEF1F5;color:#1e293b}
   <a class="rounded-lg px-3 py-2 hover:bg-white/10 hover:text-white" href="/usuario/{{ yo.id }}">Mi perfil</a>
   <a class="rounded-lg px-3 py-2 text-slate-400 hover:bg-white/10 hover:text-white" href="/salir">Salir</a>
  </nav></header>{% endif %}
-<main class="{{ 'mx-auto max-w-6xl space-y-5 p-4 pt-6' if yo }}">
+<main class="{{ 'mx-auto w-full max-w-7xl space-y-5 p-4 pt-6 md:p-6' if yo }}">
 {% for cat, m in get_flashed_messages(with_categories=true) %}
 <div class="rounded-xl px-4 py-3 text-sm font-semibold {{ 'bg-rose-50 text-rose-800 ring-1 ring-rose-200' if cat=='err' else 'bg-teal-50 text-teal-900 ring-1 ring-teal-200' }}" role="status">{{ m }}</div>{% endfor %}
 {% block c %}{% endblock %}</main></body></html>

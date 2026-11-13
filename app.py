@@ -45,7 +45,8 @@ WITH yo, p,
   size([(yo)-[:CONECTA_CON]-(c:Usuario)-[:CONECTA_CON]-(p) | c]) AS comunes,
   size([(yo)-[:TIENE_HABILIDAD]->(h)<-[:TIENE_HABILIDAD]-(p) | h]) AS compartidas
 WHERE comunes + compartidas > 0
-RETURN p.id AS id, p.nombre AS nombre, p.titular AS titular, comunes, compartidas
+RETURN p.id AS id, p.nombre AS nombre, p.titular AS titular, comunes, compartidas,
+       comunes * 2 + compartidas AS score
 ORDER BY comunes * 2 + compartidas DESC LIMIT 6""",
 "similares": """MATCH (yo:Usuario {id: $u})-[:TIENE_HABILIDAD]->(h)<-[:TIENE_HABILIDAD]-(p:Usuario)
 WHERE p <> yo
@@ -57,12 +58,15 @@ RETURN DISTINCT p.id AS id, p.nombre AS nombre, p.titular AS titular""",
 "empleos": """MATCH (yo:Usuario {id: $u}), (e:Empresa)-[:PUBLICA]->(o:Oferta)
 RETURN o.id AS id, o.titulo AS titulo, o.descripcion AS descripcion,
   e.id AS empresa_id, e.nombre AS empresa,
+  e.sector AS sector, e.ciudad AS ciudad, o.modalidad AS modalidad,
+  o.salario AS salario, o.fecha AS fecha,
   size([(o)-[:REQUIERE]->(h) | h]) AS req,
   size([(o)-[:REQUIERE]->(h)<-[:TIENE_HABILIDAD]-(yo) | h]) AS cumple,
   size([(e)<-[:TRABAJA_EN]-(c:Usuario)-[:CONECTA_CON]-(yo) | c]) AS conocidos,
   size([(yo)-[:POSTULA_A]->(o) | o]) AS postulado""",
 "hab_oferta": """MATCH (o:Oferta {id: $o})-[:REQUIERE]->(h:Habilidad)
-RETURN h.nombre AS nombre, EXISTS { (:Usuario {id: $u})-[:TIENE_HABILIDAD]->(h) } AS tengo""",
+OPTIONAL MATCH (:Usuario {id: $u})-[t:TIENE_HABILIDAD]->(h)
+RETURN h.nombre AS nombre, t.nivel AS nivel, t IS NOT NULL AS tengo""",
 "candidatos": """MATCH (o:Oferta {id: $o})-[:REQUIERE]->(h)<-[:TIENE_HABILIDAD]-(p:Usuario)
 WITH p, count(DISTINCT h) AS cumple
 RETURN p.id AS id, p.nombre AS nombre, p.titular AS titular, cumple,
@@ -112,6 +116,16 @@ def camino(u, tipo, destino):
 
 def comunidades():
     """Comunidad = grupo de usuarios que se alcanzan entre sí por CONECTA_CON (union-find)."""
+    nombradas = q("""MATCH (c:Comunidad)<-[:PERTENECE_A]-(u:Usuario)
+                     OPTIONAL MATCH (u)-[:TIENE_HABILIDAD]->(h:Habilidad)
+                     RETURN c.nombre AS nombre, c.descripcion AS descripcion,
+                            collect(DISTINCT u.nombre) AS miembros,
+                            collect(DISTINCT h.nombre)[0..4] AS habilidades
+                     ORDER BY c.nombre""")
+    if nombradas:
+        return [{"nombre": r["nombre"], "descripcion": r["descripcion"],
+                 "miembros": r["miembros"], "habilidades": r["habilidades"]}
+                for r in nombradas]
     nom = {r["id"]: r["nombre"] for r in q("MATCH (u:Usuario) RETURN u.id AS id, u.nombre AS nombre")}
     padre = {i: i for i in nom}
     def raiz(i):
@@ -284,14 +298,16 @@ def publicar():
 @app.route("/usuario/<int:id>")
 @login
 def usuario(id):
-    p = q1("MATCH (p:Usuario {id: $id}) RETURN p.id AS id, p.nombre AS nombre, p.titular AS titular, p.ciudad AS ciudad, p.bio AS bio", {"id": id})
+    p = q1("""MATCH (p:Usuario {id: $id})
+              RETURN p.id AS id, p.nombre AS nombre, p.titular AS titular,
+                     p.ciudad AS ciudad, p.bio AS bio, p.experiencia AS experiencia""", {"id": id})
     if not p:
         return redirect("/inicio")
     u = session["uid"]
     return render_template("perfil.html", p=p, es_yo=(id == u),
         habs=q("MATCH (:Usuario {id: $id})-[:TIENE_HABILIDAD]->(h) RETURN h.id AS id, h.nombre AS nombre ORDER BY h.nombre", {"id": id}),
-        trabajos=q("MATCH (:Usuario {id: $id})-[t:TRABAJA_EN]->(e) RETURN e.id AS id, e.nombre AS nombre, t.cargo AS cargo", {"id": id}),
-        proys=q("MATCH (:Usuario {id: $id})-[:PARTICIPA_EN]->(p) RETURN p.id AS id, p.nombre AS nombre", {"id": id}),
+        trabajos=q("MATCH (:Usuario {id: $id})-[t:TRABAJA_EN]->(e) RETURN e.id AS id, e.nombre AS nombre, t.cargo AS cargo, t.periodo AS periodo", {"id": id}),
+        proys=q("MATCH (:Usuario {id: $id})-[t:PARTICIPA_EN]->(p) RETURN p.id AS id, p.nombre AS nombre, p.estado AS estado, t.rol AS rol", {"id": id}),
         n_con=q1("MATCH (:Usuario {id: $id})-[:CONECTA_CON]-(c) RETURN count(c) AS n", {"id": id})["n"],
         es_con=q1("MATCH (:Usuario {id: $u})-[:CONECTA_CON]-(:Usuario {id: $id}) RETURN count(*) AS n", {"u": u, "id": id})["n"] > 0,
         comunes=q(S["comunes"], {"u": u, "o": id}) if id != u else [],
@@ -308,6 +324,8 @@ def empresa(id):
         return redirect("/empleos")
     es_equipo = bool(q1("""MATCH (:Usuario {id: $u})-[:TRABAJA_EN]->(:Empresa {id: $e})
                             RETURN 1 AS ok""", {"u": session["uid"], "e": id}))
+    e.update(q1("""MATCH (e:Empresa {id: $id})
+                   RETURN e.tamano AS tamano, e.descripcion AS descripcion""", {"id": id}) or {})
     return render_template("empresa.html", e=e, es_equipo=es_equipo,
         ofertas=q("""MATCH (e:Empresa {id: $id})-[:PUBLICA]->(o:Oferta)
                      RETURN o.id AS id, o.titulo AS titulo,
@@ -331,6 +349,9 @@ def detalle_empleo(id):
                     RETURN h.id AS id, h.nombre AS nombre""", {"id": id})
     o["postulado"] = bool(q1("""MATCH (:Usuario {id: $u})-[:POSTULA_A]->(:Oferta {id: $o})
                                 RETURN 1 AS ok""", {"u": session["uid"], "o": id}))
+    o["conexiones"] = q("""MATCH (:Usuario {id: $u})-[:CONECTA_CON]-(c:Usuario)-[:TRABAJA_EN]->(:Empresa {id: $e})
+                           RETURN DISTINCT c.id AS id, c.nombre AS nombre, c.titular AS titular
+                           ORDER BY c.nombre""", {"u": session["uid"], "e": o["empresa_id"]})
     return render_template("empleo_detalle.html", o=o)
 
 @app.route("/empleo/<int:id>/candidatos")
@@ -363,8 +384,9 @@ def detalle_proyecto(id):
         return redirect("/proyectos")
     p["tec"] = q("""MATCH (p:Proyecto {id: $id})-[:USA_TECNOLOGIA]->(h)
                     RETURN h.id AS id, h.nombre AS nombre ORDER BY h.nombre""", {"id": id})
-    p["miembros"] = q("""MATCH (u:Usuario)-[:PARTICIPA_EN]->(:Proyecto {id: $id})
-                         RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular
+    p["miembros"] = q("""MATCH (u:Usuario)-[m:PARTICIPA_EN]->(:Proyecto {id: $id})
+                         RETURN u.id AS id, u.nombre AS nombre, u.titular AS titular,
+                                m.rol AS rol
                          ORDER BY u.nombre""", {"id": id})
     p["rel"] = q(S["proyectos_rel"], {"p": id})
     return render_template("proyecto_detalle.html", p=p)
@@ -382,15 +404,17 @@ def red():
     similares = q(S["similares"], {"u": u})
     for s in similares:
         s["hab"] = ", ".join(s["hab"])
+    personas = q("MATCH (p:Usuario) WHERE p.id <> $u RETURN p.id AS id, p.nombre AS nombre ORDER BY p.nombre", {"u": u})
+    empresas = q("MATCH (e:Empresa) RETURN e.id AS id, e.nombre AS nombre ORDER BY e.nombre")
     return render_template("red.html", contactos=contactos, similares=similares,
         resultados=q("""MATCH (p:Usuario) WHERE p.id <> $u AND (toLower(p.nombre) CONTAINS toLower($b)
                         OR toLower(coalesce(p.titular, '')) CONTAINS toLower($b))
                         RETURN p.id AS id, p.nombre AS nombre, p.titular AS titular LIMIT 10""", {"u": u, "b": buscar}) if buscar else None,
         buscar=buscar, ids_con={c["id"] for c in contactos},
-        otro=otro, comunes=q(S["comunes"], {"u": u, "o": otro}) if otro else None,
+        otro=otro, otro_nombre=next((p["nombre"] for p in personas if p["id"] == otro), None) if otro else None,
+        comunes=q(S["comunes"], {"u": u, "o": otro}) if otro else None,
         destino=destino, ruta=ruta,
-        personas=q("MATCH (p:Usuario) WHERE p.id <> $u RETURN p.id AS id, p.nombre AS nombre ORDER BY p.nombre", {"u": u}),
-        empresas=q("MATCH (e:Empresa) RETURN e.id AS id, e.nombre AS nombre ORDER BY e.nombre"))
+        personas=personas, empresas=empresas)
 
 @app.route("/empleos")
 @login
@@ -418,7 +442,8 @@ def proyectos():
 def analitica():
     c = lambda etiqueta: q1(f"MATCH (n:{etiqueta}) RETURN count(n) AS c")["c"]
     tot = {"usuarios": c("Usuario"), "conexiones": q1("MATCH ()-[r:CONECTA_CON]->() RETURN count(r) AS c")["c"],
-           "empresas": c("Empresa"), "ofertas": c("Oferta")}
+           "empresas": c("Empresa"), "ofertas": c("Oferta"),
+           "habilidades": c("Habilidad"), "proyectos": c("Proyecto")}
     return render_template("analitica.html", infl=q(S["influyentes"]), demanda=q(S["demanda"]), comu=comunidades(), tot=tot)
 
 @app.route("/grafo")

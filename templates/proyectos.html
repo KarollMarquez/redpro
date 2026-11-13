@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% from "_ui.html" import checks %}{% block c %}
 <section class="hero rounded-2xl p-7 shadow-lg"><p class="text-sm font-bold uppercase tracking-[.2em] text-teal-200">Construye en comunidad</p><h1 class="mt-2 text-3xl font-extrabold">Proyectos que conectan talento</h1><p class="mt-2 max-w-2xl text-teal-100">Encuentra iniciativas, comparte tus habilidades y conoce colaboradores.</p></section>
 <div class="grid gap-5 md:grid-cols-3"><div class="grid gap-4 md:col-span-2 md:grid-cols-2">
-{% for p in ps %}<article class="card flex flex-col"><h2 class="text-lg font-extrabold"><a href="/proyecto/{{ p.id }}" class="hover:text-teal-700">{{ p.nombre }}</a></h2><p class="mt-1 text-sm text-stone-600">{{ p.descripcion }}</p>
+{% for p in ps %}<article class="card card-hover flex flex-col"><div class="flex items-start justify-between gap-3"><h2 class="text-lg font-extrabold"><a href="/proyecto/{{ p.id }}" class="hover:text-teal-700">{{ p.nombre }}</a></h2><span class="chip">{{ p.estado or 'Activo' }}</span></div><p class="mt-1 text-sm text-stone-600">{{ p.descripcion }}</p>
  <div class="mt-3 flex flex-wrap gap-2">{% for t in p.tec %}<span class="chip">{{ t.nombre }}</span>{% endfor %}</div>
  <p class="mt-3 text-xs text-stone-500">{{ p.miembros }} participante{{ '' if p.miembros==1 else 's' }}</p>
  {% if p.rel %}<div class="mt-3 border-t border-stone-100 pt-3 text-sm"><p class="font-bold">Relacionado con</p>{% for r in p.rel %}<p>{{ r.nombre }} <span class="text-xs text-stone-500">· {{ r.tecnologias }} tecnología{{ '' if r.tecnologias==1 else 's' }} y {{ r.miembros }} miembro{{ '' if r.miembros==1 else 's' }} en común</span></p>{% endfor %}</div>{% endif %}

@@ -8,7 +8,7 @@ d = GraphDatabase.driver(os.getenv("NEO4J_URI", "bolt://localhost:7687"),
                          auth=(os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASS", "12345678")))
 with d.session() as s:
     # borra solo los nodos de esta app (no toca otras bases de datos tuyas)
-    s.run("MATCH (n) WHERE n:Usuario OR n:Empresa OR n:Habilidad OR n:Proyecto OR n:Oferta OR n:Publicacion DETACH DELETE n").consume()
+    s.run("MATCH (n) WHERE n:Usuario OR n:Empresa OR n:Habilidad OR n:Proyecto OR n:Oferta OR n:Publicacion OR n:Comunidad DETACH DELETE n").consume()
     texto = "\n".join(l for l in open("seed.cypher", encoding="utf-8").read().splitlines() if not l.strip().startswith("//"))
     clave = generate_password_hash("demo123")
     for sentencia in texto.split(";\n"):

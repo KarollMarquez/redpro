@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% from "_ui.html" import persona, conectar %}{% block c %}
+{% extends "base.html" %}{% from "_ui.html" import avatar, persona, conectar %}{% block c %}
 <section class="card"><h1 class="h2">Encuentra personas</h1>
  <form class="mt-3 flex gap-2"><input class="inp" name="buscar" value="{{ buscar }}" placeholder="Busca por nombre o cargo, por ejemplo: redes"><button class="btn">Buscar</button></form>
  {% if resultados is not none %}<div class="mt-3 divide-y divide-stone-100">{% for r in resultados %}{% call persona(r) %}{% if r.id in ids_con %}<span class="chip">Ya conectados</span>{% else %}{{ conectar(r.id) }}{% endif %}{% endcall %}{% else %}<p class="py-3 text-sm text-stone-500">No encontramos a nadie con “{{ buscar }}”.</p>{% endfor %}</div>{% endif %}</section>
@@ -11,15 +11,15 @@
  </section></div>
 <section class="card"><h2 class="h2">¿Qué contactos tenemos en común?</h2>
  <form class="mt-3 flex gap-2"><select name="otro" class="inp" required><option value="">Elige a una persona…</option>{% for p in personas %}<option value="{{ p.id }}" {{ 'selected' if otro==p.id }}>{{ p.nombre }}</option>{% endfor %}</select><button class="btn">Comparar</button></form>
- {% if comunes is not none %}<div class="mt-3">{% for c in comunes %}{{ persona(c) }}{% else %}<p class="text-sm text-stone-500">No tienen contactos en común todavía.</p>{% endfor %}</div>{% endif %}
+ {% if comunes is not none %}<div class="mt-5 rounded-2xl bg-slate-50 p-5"><div class="flex flex-wrap items-center justify-center gap-3"><div class="flex w-28 flex-col items-center gap-2 text-center">{{ avatar(yo.nombre, false, yo.id) }}<span class="text-xs font-bold">{{ yo.nombre }}</span></div><div class="h-px w-8 bg-teal-300"></div><div class="flex max-w-md flex-wrap justify-center gap-3">{% for c in comunes %}<a href="/usuario/{{ c.id }}" class="flex w-24 flex-col items-center gap-1 text-center hover:text-teal-700">{{ avatar(c.nombre, false, c.id) }}<span class="text-xs font-semibold">{{ c.nombre }}</span></a>{% else %}<p class="text-sm text-stone-500">No tienen contactos en común todavía.</p>{% endfor %}</div>{% if otro_nombre %}<div class="h-px w-8 bg-teal-300"></div><div class="flex w-28 flex-col items-center gap-2 text-center">{{ avatar(otro_nombre, false, otro) }}<span class="text-xs font-bold">{{ otro_nombre }}</span></div>{% endif %}</div><p class="mt-4 text-center text-xs font-semibold uppercase tracking-wider text-teal-700">Tu red → contactos compartidos → otra persona</p></div>{% endif %}
  </section>
 <section class="card"><h2 class="h2">¿Cuál es el camino más corto hacia una persona o empresa?</h2>
  <form class="mt-3 flex gap-2"><select name="destino" class="inp" required><option value="">Elige un destino…</option>
   <optgroup label="Personas">{% for p in personas %}<option value="u:{{ p.id }}" {{ 'selected' if destino=='u:%d'%p.id }}>{{ p.nombre }}</option>{% endfor %}</optgroup>
   <optgroup label="Empresas">{% for e in empresas %}<option value="e:{{ e.id }}" {{ 'selected' if destino=='e:%d'%e.id }}>{{ e.nombre }}</option>{% endfor %}</optgroup></select><button class="btn">Buscar ruta</button></form>
  {% if destino %}<div class="mt-4 flex flex-wrap items-center gap-2">
-  {% if ruta %}{% for s in ruta %}{% if s.rel %}<span class="text-xs text-stone-500">{{ s.rel|lower|replace('_',' ') }} -</span>{% endif %}
-  <span class="rounded-lg px-3 py-1.5 text-sm font-bold {{ {'u':'bg-teal-100 text-teal-900','e':'bg-amber-100 text-amber-900','p':'bg-emerald-100 text-emerald-900','o':'bg-rose-100 text-rose-900'}[s.t] }}">{{ s.n }}</span>{% endfor %}
+  {% if ruta %}{% for s in ruta %}{% if s.rel %}<span class="text-xs font-bold text-teal-700">— {{ s.rel|lower|replace('_',' ') }} →</span>{% endif %}
+  <span class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold shadow-sm {{ {'u':'text-teal-900','e':'text-amber-900','p':'text-emerald-900','o':'text-rose-900'}[s.t] }}">{{ s.n }}</span>{% endfor %}
   <span class="ml-2 text-sm text-stone-600">({{ ruta|length - 1 }} salto{{ '' if ruta|length==2 }}{{ 's' if ruta|length!=2 }})</span>
   {% else %}<p class="text-sm text-stone-500">No existe una ruta entre ustedes todavía. Conecta con más personas para crear una.</p>{% endif %}</div>{% endif %}
  </section>
